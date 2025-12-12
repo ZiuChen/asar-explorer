@@ -5,7 +5,23 @@ import vue from '@vitejs/plugin-vue'
 // https://vite.dev/config/
 export default defineConfig({
   build: {
-    sourcemap: true
+    sourcemap: true,
+    rolldownOptions: {
+      output: {
+        advancedChunks: {
+          groups: [
+            {
+              name: (id) => {
+                if (id.includes('node_modules')) {
+                  const name = id.split('node_modules/.pnpm/')[1].split('/')[0]
+                  return `vendor_${name}`
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
   },
   resolve: {
     alias: {
