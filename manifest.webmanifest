@@ -1,0 +1,1 @@
+{"name":"ASAR Explorer","short_name":"ASAR Explorer","description":"Preview and edit Electron ASAR files online","start_url":"/asar-explorer/","display":"standalone","background_color":"#ffffff","theme_color":"#ffffff","lang":"en","scope":"/asar-explorer/","icons":[{"src":"/logo.png","sizes":"192x192","type":"image/png"},{"src":"/logo.png","sizes":"512x512","type":"image/png"}]}
