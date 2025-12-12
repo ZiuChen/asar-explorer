@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Upload, Link, Loader2 } from 'lucide-vue-next'
+import { Upload, Link, Loader2, Github } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
@@ -76,10 +76,21 @@ async function handleDrop(event: DragEvent) {
 
 <template>
   <div
-    class="flex flex-col items-center justify-center min-h-[400px] p-8 space-y-8 w-full max-w-2xl"
+    class="relative flex flex-col items-center justify-center min-h-[400px] p-8 space-y-8 w-full max-w-2xl"
     @dragover="handleDragOver"
     @drop="handleDrop"
   >
+    <!-- GitHub 链接 -->
+    <a
+      href="https://github.com/ZiuChen/asar-explorer"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="absolute top-0 right-0 p-2 text-muted-foreground hover:text-foreground transition-colors"
+      title="GitHub"
+    >
+      <Github class="size-5" />
+    </a>
+
     <!-- 标题 -->
     <div class="text-center space-y-2">
       <h1 class="text-3xl font-bold">{{ t('app.title') }}</h1>
