@@ -1,13 +1,9 @@
 /**
- * ASAR FileSystem for modern-monaco Workspace
- * 实现 FileSystem 接口，将 ASAR 内容作为虚拟文件系统提供给 Monaco
+ * ASAR FileSystem
+ * 虚拟文件系统，将 ASAR 内容映射为内存文件系统
  */
 
-import type { FileSystem } from 'modern-monaco'
-import type { FileModification } from '@/types/asar'
-import { historyDB } from '@/persist/history'
 import { parseHeaderAsync, extractFileAsync } from '@/lib/asar-browser'
-import { prefixedNanoid } from './crypto'
 
 /** 文件系统条目类型 */
 const FileType = {
@@ -64,9 +60,9 @@ interface FileWatcher {
 
 /**
  * ASAR 文件系统
- * 将 ASAR 内容映射为虚拟文件系统供 Monaco 使用
+ * 将 ASAR 内容映射为虚拟文件系统
  */
-export class AsarFileSystem implements FileSystem {
+export class AsarFileSystem {
   private root: FileNode
   private watchers: FileWatcher[] = []
   private asarData: ArrayBuffer | null = null
@@ -248,13 +244,6 @@ export class AsarFileSystem implements FileSystem {
         node.children.set(fileName, fileNode)
       }
     }
-
-    // 加载已有的修改
-    const modifications = await historyDB.getAllModifications(asarId)
-    for (const mod of modifications) {
-      const path = mod.path.replace(/^\//, '')
-      await this.writeFile(path, mod.content, { isModelContentChange: false })
-    }
   }
 
   /** 清空文件系统 */
@@ -433,18 +422,6 @@ export class AsarFileSystem implements FileSystem {
 
     parent.children.set(name, fileNode)
 
-    // 保存到 IndexedDB（如果有关联的 ASAR）
-    if (this.asarId && context?.isModelContentChange !== false) {
-      const modification: FileModification = {
-        id: prefixedNanoid('M'),
-        asarId: this.asarId,
-        path: '/' + this.normalizePath(filename),
-        content: data,
-        modifiedAt: now
-      }
-      await historyDB.saveModification(modification)
-    }
-
     this.notifyWatchers(isCreate ? 'create' : 'modify', filename, FileType.File, context)
   }
 
@@ -525,9 +502,6 @@ export class AsarFileSystem implements FileSystem {
     node.fromAsar = true
     node.mtime = Date.now()
     node.version++
-
-    // 从 IndexedDB 删除修改记录
-    await historyDB.deleteModification(this.asarId, '/' + this.normalizePath(filename))
 
     this.notifyWatchers('modify', filename, FileType.File)
   }

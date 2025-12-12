@@ -70,25 +70,6 @@ pnpm build
 - **shadcn-vue / reka-ui** - UI 组件库
 - **IndexedDB** - 本地数据持久化
 
-### 项目结构
-
-```
-src/
-├── lib/
-│   └── asar-browser/     # ASAR 解析库
-├── models/
-│   ├── types.ts          # 类型定义
-│   ├── history-db.ts     # IndexedDB 存储
-│   └── asar-filesystem.ts # 虚拟文件系统
-├── stores/
-│   └── asar.ts           # 状态管理
-├── components/
-│   ├── AsarUploader.vue  # 上传组件
-│   ├── AsarSidebar.vue   # 侧边栏
-│   └── AsarFileTree.vue  # 文件树
-└── App.vue               # 主应用
-```
-
 ## 📝 许可证
 
 MIT License

@@ -1,29 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { Upload, Link, Loader2, History, Trash2 } from 'lucide-vue-next'
+import { Upload, Link, Loader2 } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAsarStore } from '@/stores/asar'
+import { toast } from 'vue-sonner'
 
-const {
-  loadFromFile,
-  loadFromUrl,
-  loadFromHistory,
-  deleteFromHistory,
-  asarHistory,
-  loadHistory,
-  isLoadingAsar,
-  error
-} = useAsarStore()
+const { t } = useI18n()
+
+const { loadFromFile, loadFromUrl, isLoadingAsar, error } = useAsarStore()
 
 const urlInput = ref('')
 const fileInputRef = ref<HTMLInputElement | null>(null)
-const showHistory = ref(false)
-
-// 加载历史记录
-onMounted(() => {
-  loadHistory()
-})
 
 // 处理文件选择
 function handleFileSelect() {
@@ -36,9 +25,14 @@ async function onFileChange(event: Event) {
   if (!file) return
 
   try {
+    toast.info(t('uploader.loadingAsar'))
     await loadFromFile(file)
+    toast.success(t('uploader.loadSuccess'))
   } catch (e) {
     console.error('Failed to load file:', e)
+    toast.error(t('uploader.loadFailed'), {
+      description: e instanceof Error ? e.message : String(e)
+    })
   } finally {
     input.value = ''
   }
@@ -49,10 +43,15 @@ async function handleUrlLoad() {
   if (!urlInput.value.trim()) return
 
   try {
+    toast.info(t('uploader.loadingAsar'))
     await loadFromUrl(urlInput.value.trim())
+    toast.success(t('uploader.loadSuccess'))
     urlInput.value = ''
   } catch (e) {
     console.error('Failed to load from URL:', e)
+    toast.error(t('uploader.loadFailed'), {
+      description: e instanceof Error ? e.message : String(e)
+    })
   }
 }
 
@@ -73,35 +72,6 @@ async function handleDrop(event: DragEvent) {
     console.error('Failed to load dropped file:', e)
   }
 }
-
-// 从历史记录加载
-async function handleLoadFromHistory(id: string) {
-  try {
-    await loadFromHistory(id)
-  } catch (e) {
-    console.error('Failed to load from history:', e)
-  }
-}
-
-// 从历史记录删除
-async function handleDeleteFromHistory(id: string, event: Event) {
-  event.stopPropagation()
-  if (confirm('确定要删除这条历史记录吗？')) {
-    await deleteFromHistory(id)
-  }
-}
-
-// 格式化文件大小
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
-}
-
-// 格式化日期
-function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleString()
-}
 </script>
 
 <template>
@@ -112,8 +82,8 @@ function formatDate(timestamp: number): string {
   >
     <!-- 标题 -->
     <div class="text-center space-y-2">
-      <h1 class="text-3xl font-bold">ASAR Explorer</h1>
-      <p class="text-muted-foreground">在线预览和编辑 Electron ASAR 文件</p>
+      <h1 class="text-3xl font-bold">{{ t('app.title') }}</h1>
+      <p class="text-muted-foreground">{{ t('app.description') }}</p>
     </div>
 
     <!-- 错误提示 -->
@@ -129,8 +99,8 @@ function formatDate(timestamp: number): string {
         @click="handleFileSelect"
       >
         <Upload class="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-        <p class="text-lg font-medium">点击或拖放 ASAR 文件</p>
-        <p class="text-sm text-muted-foreground mt-1">支持 .asar 格式文件</p>
+        <p class="text-lg font-medium">{{ t('uploader.dropOrClick') }}</p>
+        <p class="text-sm text-muted-foreground mt-1">{{ t('uploader.supportFormat') }}</p>
         <input
           ref="fileInputRef"
           type="file"
@@ -143,7 +113,7 @@ function formatDate(timestamp: number): string {
       <!-- 分隔线 -->
       <div class="flex items-center gap-4">
         <div class="flex-1 h-px bg-border" />
-        <span class="text-sm text-muted-foreground">或</span>
+        <span class="text-sm text-muted-foreground">{{ t('common.or') }}</span>
         <div class="flex-1 h-px bg-border" />
       </div>
 
@@ -151,59 +121,21 @@ function formatDate(timestamp: number): string {
       <div class="flex gap-2">
         <Input
           v-model="urlInput"
-          placeholder="输入 ASAR 文件 URL..."
+          :placeholder="t('uploader.inputUrlPlaceholder')"
           class="flex-1"
           @keyup.enter="handleUrlLoad"
         />
         <Button @click="handleUrlLoad" :disabled="!urlInput.trim()">
-          <Link class="w-4 h-4 mr-2" />
-          加载
+          <Link class="size-4" />
+          {{ t('common.load') }}
         </Button>
-      </div>
-
-      <!-- 历史记录 -->
-      <div v-if="asarHistory.length > 0" class="mt-6">
-        <button
-          class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full justify-center"
-          @click="showHistory = !showHistory"
-        >
-          <History class="w-4 h-4" />
-          <span>历史记录 ({{ asarHistory.length }})</span>
-        </button>
-
-        <div v-if="showHistory" class="mt-4 space-y-2 max-h-60 overflow-y-auto">
-          <div
-            v-for="item in asarHistory"
-            :key="item.id"
-            class="flex items-center justify-between p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
-            @click="handleLoadFromHistory(item.id)"
-          >
-            <div class="flex-1 min-w-0">
-              <p class="font-medium truncate">{{ item.name }}</p>
-              <p class="text-xs text-muted-foreground">
-                {{ formatSize(item.size) }} · {{ formatDate(item.lastModifiedAt) }}
-                <span v-if="item.modifiedFileCount > 0" class="ml-2 text-orange-500">
-                  {{ item.modifiedFileCount }} 处修改
-                </span>
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              class="shrink-0 ml-2"
-              @click="handleDeleteFromHistory(item.id, $event)"
-            >
-              <Trash2 class="w-4 h-4 text-muted-foreground hover:text-destructive" />
-            </Button>
-          </div>
-        </div>
       </div>
     </div>
 
     <!-- 加载中 -->
     <div v-if="isLoadingAsar" class="flex items-center gap-2">
       <Loader2 class="w-5 h-5 animate-spin" />
-      <span>正在加载 ASAR 文件...</span>
+      <span>{{ t('uploader.loadingAsar') }}</span>
     </div>
   </div>
 </template>

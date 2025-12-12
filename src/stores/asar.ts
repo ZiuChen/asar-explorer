@@ -3,14 +3,12 @@
  * 使用 VueUse createGlobalState 管理全局状态
  */
 
-import { ref, shallowRef, computed, markRaw } from 'vue'
+import { ref, shallowRef, computed } from 'vue'
 import { createGlobalState } from '@vueuse/core'
-import type { Workspace } from 'modern-monaco'
-import type { AsarMeta, AsarSnapshot, AsarHistoryItem, FileTreeNode } from '@/types/asar'
+import type { AsarMeta, FileTreeNode } from '@/types/asar'
 import { AsarFileSystem } from '@/utils/asar-filesystem'
 import { modifyPackageAsync } from '@/lib/asar-browser'
-import { historyDB } from '@/persist/history'
-import { prefixedNanoid, sha256 } from '@/utils/crypto'
+import { prefixedNanoid } from '@/utils/crypto'
 
 /** 使用 createGlobalState 创建全局状态 */
 export const useAsarStore = createGlobalState(() => {
@@ -19,8 +17,8 @@ export const useAsarStore = createGlobalState(() => {
   /** ASAR 文件系统实例 */
   const asarFS = new AsarFileSystem()
 
-  /** Monaco Workspace 实例 */
-  let workspace: Workspace | null = null
+  /** 当前加载的 ASAR 原始数据 */
+  let currentAsarData: ArrayBuffer | null = null
 
   // ========== 响应式状态 ==========
 
@@ -48,15 +46,6 @@ export const useAsarStore = createGlobalState(() => {
   /** 修改的文件集合 */
   const modifiedFiles = ref<Set<string>>(new Set())
 
-  /** ASAR 历史记录列表 */
-  const asarHistory = shallowRef<AsarHistoryItem[]>([])
-
-  /** 当前 ASAR 的快照列表 */
-  const snapshots = shallowRef<AsarSnapshot[]>([])
-
-  /** 编辑器是否就绪 */
-  const isEditorReady = ref(false)
-
   // ========== 计算属性 ==========
 
   /** 是否有修改 */
@@ -64,33 +53,6 @@ export const useAsarStore = createGlobalState(() => {
 
   /** 是否已加载 ASAR */
   const asarLoaded = computed(() => currentAsar.value !== null)
-
-  // ========== 编辑器管理（由 monaco-editor.vue 组件调用） ==========
-
-  /**
-   * 设置 Workspace 实例（由组件调用）
-   */
-  function setWorkspace(ws: Workspace | null): void {
-    workspace = ws ? markRaw(ws) : null
-  }
-
-  /**
-   * 设置编辑器就绪状态（由组件调用）
-   */
-  function setEditorReady(ready: boolean): void {
-    isEditorReady.value = ready
-  }
-
-  /**
-   * 加载历史记录
-   */
-  async function loadHistory(): Promise<void> {
-    try {
-      asarHistory.value = await historyDB.getAllAsarHistory()
-    } catch (e) {
-      console.error('Failed to load history:', e)
-    }
-  }
 
   // ========== ASAR 操作 ==========
 
@@ -103,7 +65,7 @@ export const useAsarStore = createGlobalState(() => {
       error.value = null
 
       const buffer = await file.arrayBuffer()
-      await loadAsarData(buffer, file.name, 'file')
+      await loadAsarData(buffer, file.name)
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
       throw e
@@ -122,12 +84,10 @@ export const useAsarStore = createGlobalState(() => {
 
       let buffer: ArrayBuffer
       let fileName: string
-      let source: 'url' | 'data-url'
 
       if (url.startsWith('data:')) {
         // 处理 Data URL
         fileName = 'data-url.asar'
-        source = 'data-url'
         const base64 = url.split(',')[1] || ''
         const binary = atob(base64)
         const bytes = new Uint8Array(binary.length)
@@ -139,7 +99,6 @@ export const useAsarStore = createGlobalState(() => {
         // 从 URL 获取
         const urlObj = new URL(url)
         fileName = urlObj.pathname.split('/').pop() || 'remote.asar'
-        source = 'url'
 
         const response = await fetch(url)
         if (!response.ok) {
@@ -148,49 +107,7 @@ export const useAsarStore = createGlobalState(() => {
         buffer = await response.arrayBuffer()
       }
 
-      await loadAsarData(buffer, fileName, source, url)
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : String(e)
-      throw e
-    } finally {
-      isLoadingAsar.value = false
-    }
-  }
-
-  /**
-   * 从历史记录加载 ASAR
-   */
-  async function loadFromHistory(id: string): Promise<void> {
-    try {
-      isLoadingAsar.value = true
-      error.value = null
-
-      const meta = await historyDB.getAsarMeta(id)
-      if (!meta) {
-        throw new Error('ASAR not found in history')
-      }
-
-      const data = await historyDB.getAsarData(id)
-      if (!data) {
-        throw new Error('ASAR data not found')
-      }
-
-      // 加载到文件系统
-      await asarFS.loadFromAsar(data, id)
-
-      // 更新状态
-      currentAsar.value = meta
-      fileTree.value = asarFS.getFileTree() as FileTreeNode[]
-      modifiedFiles.value = new Set(asarFS.getModifiedFiles())
-      currentFile.value = null
-
-      // 加载快照
-      await loadSnapshots()
-
-      // 更新历史记录（更新最后修改时间）
-      meta.lastModifiedAt = Date.now()
-      await historyDB.saveAsar(meta, data)
-      await loadHistory()
+      await loadAsarData(buffer, fileName)
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
       throw e
@@ -202,54 +119,29 @@ export const useAsarStore = createGlobalState(() => {
   /**
    * 加载 ASAR 数据的内部方法
    */
-  async function loadAsarData(
-    data: ArrayBuffer,
-    fileName: string,
-    source: 'file' | 'url' | 'data-url',
-    sourceUrl?: string
-  ): Promise<void> {
-    // 计算哈希
-    const hash = await sha256(data)
+  async function loadAsarData(data: ArrayBuffer, fileName: string): Promise<void> {
+    const asarId = prefixedNanoid('R')
 
-    // 检查是否已存在
-    let existingMeta = await historyDB.findAsarByHash(hash)
-    let asarId: string
+    // 保存原始数据
+    currentAsarData = data
 
-    if (existingMeta) {
-      // 使用已存在的记录
-      asarId = existingMeta.id
-      existingMeta.lastModifiedAt = Date.now()
-      await historyDB.saveAsar(existingMeta, data)
-    } else {
-      // 创建新记录
-      asarId = prefixedNanoid('R')
-      existingMeta = {
-        id: asarId,
-        name: fileName,
-        size: data.byteLength,
-        importedAt: Date.now(),
-        lastModifiedAt: Date.now(),
-        source,
-        sourceUrl,
-        hash
-      }
-      await historyDB.saveAsar(existingMeta, data)
+    // 创建元信息
+    const meta: AsarMeta = {
+      id: asarId,
+      name: fileName,
+      size: data.byteLength,
+      importedAt: Date.now(),
+      lastModifiedAt: Date.now()
     }
 
     // 加载到文件系统
     await asarFS.loadFromAsar(data, asarId)
 
     // 更新状态
-    currentAsar.value = existingMeta
+    currentAsar.value = meta
     fileTree.value = asarFS.getFileTree() as FileTreeNode[]
-    modifiedFiles.value = new Set(asarFS.getModifiedFiles())
+    modifiedFiles.value = new Set()
     currentFile.value = null
-
-    // 加载快照
-    await loadSnapshots()
-
-    // 刷新历史记录
-    await loadHistory()
   }
 
   /**
@@ -258,33 +150,21 @@ export const useAsarStore = createGlobalState(() => {
   function closeAsar(): void {
     asarFS.clear()
     currentAsar.value = null
+    currentAsarData = null
     fileTree.value = []
     modifiedFiles.value = new Set()
     currentFile.value = null
-    snapshots.value = []
   }
 
   // ========== 文件操作 ==========
 
   /**
    * 打开文件
+   * 更新 currentFile 状态，实际打开文件由 monaco-editor 组件的 watch 处理
    */
   async function openFile(path: string): Promise<void> {
-    if (!workspace) {
-      throw new Error('Editor not initialized')
-    }
-
-    try {
-      // 规范化路径
-      const normalizedPath = path.replace(/^\/+/, '')
-
-      // 在 Monaco 中打开文件
-      await workspace.openTextDocument(normalizedPath)
-      currentFile.value = path
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : String(e)
-      throw e
-    }
+    // 更新当前文件路径，monaco-editor 组件会监听此变化并打开文件
+    currentFile.value = path
   }
 
   /**
@@ -320,76 +200,22 @@ export const useAsarStore = createGlobalState(() => {
    * 重置所有文件
    */
   async function resetAllFiles(): Promise<void> {
-    if (!currentAsar.value) return
+    if (!currentAsar.value || !currentAsarData) return
 
     try {
-      // 清除所有修改
-      await historyDB.clearModifications(currentAsar.value.id)
-
       // 重新加载 ASAR
-      const data = await historyDB.getAsarData(currentAsar.value.id)
-      if (data) {
-        await asarFS.loadFromAsar(data, currentAsar.value.id)
-        fileTree.value = asarFS.getFileTree() as FileTreeNode[]
-        modifiedFiles.value = new Set()
+      await asarFS.loadFromAsar(currentAsarData, currentAsar.value.id)
+      fileTree.value = asarFS.getFileTree() as FileTreeNode[]
+      modifiedFiles.value = new Set()
 
-        // 重新打开当前文件
-        if (currentFile.value) {
-          await openFile(currentFile.value)
-        }
+      // 重新打开当前文件
+      if (currentFile.value) {
+        await openFile(currentFile.value)
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
       throw e
     }
-  }
-
-  // ========== 快照操作 ==========
-
-  /**
-   * 加载当前 ASAR 的快照
-   */
-  async function loadSnapshots(): Promise<void> {
-    if (!currentAsar.value) {
-      snapshots.value = []
-      return
-    }
-
-    try {
-      snapshots.value = await historyDB.getSnapshots(currentAsar.value.id)
-    } catch (e) {
-      console.error('Failed to load snapshots:', e)
-      snapshots.value = []
-    }
-  }
-
-  /**
-   * 创建快照
-   */
-  async function createSnapshot(name: string, description?: string): Promise<void> {
-    if (!currentAsar.value) {
-      throw new Error('No ASAR loaded')
-    }
-
-    const snapshot: AsarSnapshot = {
-      id: prefixedNanoid('S'),
-      asarId: currentAsar.value.id,
-      name,
-      createdAt: Date.now(),
-      modifiedFiles: Array.from(modifiedFiles.value),
-      description
-    }
-
-    await historyDB.createSnapshot(snapshot)
-    await loadSnapshots()
-  }
-
-  /**
-   * 删除快照
-   */
-  async function deleteSnapshot(id: string): Promise<void> {
-    await historyDB.deleteSnapshot(id)
-    await loadSnapshots()
   }
 
   // ========== 导出操作 ==========
@@ -398,7 +224,7 @@ export const useAsarStore = createGlobalState(() => {
    * 下载修改后的 ASAR
    */
   async function downloadModifiedAsar(): Promise<void> {
-    if (!currentAsar.value) {
+    if (!currentAsar.value || !currentAsarData) {
       throw new Error('No ASAR loaded')
     }
 
@@ -406,22 +232,19 @@ export const useAsarStore = createGlobalState(() => {
       isRepacking.value = true
       error.value = null
 
-      // 获取原始数据
-      const originalData = await historyDB.getAsarData(currentAsar.value.id)
-      if (!originalData) {
-        throw new Error('Original ASAR data not found')
-      }
-
       // 收集所有修改
-      const modifications = await historyDB.getAllModifications(currentAsar.value.id)
       const modificationMap: Record<string, Uint8Array> = {}
+      const modifiedPaths = asarFS.getModifiedFiles()
 
-      for (const mod of modifications) {
-        modificationMap[mod.path] = mod.content
+      for (const path of modifiedPaths) {
+        const content = await asarFS.readFile(path)
+        if (content) {
+          modificationMap[path] = content
+        }
       }
 
       // 在 WebWorker 中重新打包
-      const newAsarData = await modifyPackageAsync(originalData, modificationMap)
+      const newAsarData = await modifyPackageAsync(currentAsarData, modificationMap)
 
       // 创建下载
       const blob = new Blob([newAsarData.buffer as ArrayBuffer], {
@@ -447,16 +270,11 @@ export const useAsarStore = createGlobalState(() => {
    * 下载原始 ASAR
    */
   async function downloadOriginalAsar(): Promise<void> {
-    if (!currentAsar.value) {
+    if (!currentAsar.value || !currentAsarData) {
       throw new Error('No ASAR loaded')
     }
 
-    const data = await historyDB.getAsarData(currentAsar.value.id)
-    if (!data) {
-      throw new Error('ASAR data not found')
-    }
-
-    const blob = new Blob([data], { type: 'application/octet-stream' })
+    const blob = new Blob([currentAsarData], { type: 'application/octet-stream' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -467,29 +285,7 @@ export const useAsarStore = createGlobalState(() => {
     URL.revokeObjectURL(url)
   }
 
-  // ========== 历史记录操作 ==========
-
-  /**
-   * 从历史记录中删除 ASAR
-   */
-  async function deleteFromHistory(id: string): Promise<void> {
-    // 如果是当前加载的，先关闭
-    if (currentAsar.value?.id === id) {
-      closeAsar()
-    }
-
-    await historyDB.deleteAsar(id)
-    await loadHistory()
-  }
-
   // ========== 辅助方法 ==========
-
-  /**
-   * 获取 Workspace 实例
-   */
-  function getWorkspace(): Workspace | null {
-    return workspace
-  }
 
   /**
    * 获取 FileSystem 实例
@@ -506,9 +302,6 @@ export const useAsarStore = createGlobalState(() => {
     modifiedFiles.value = new Set(asarFS.getModifiedFiles())
   }
 
-  // 在模块加载时初始化历史记录
-  loadHistory().catch(console.error)
-
   return {
     // 状态
     currentAsar,
@@ -519,30 +312,19 @@ export const useAsarStore = createGlobalState(() => {
     isRepacking,
     error,
     modifiedFiles,
-    asarHistory,
-    snapshots,
-    isEditorReady,
     // 计算属性
     hasModifications,
     asarLoaded,
     // 方法
-    setWorkspace,
-    setEditorReady,
-    loadHistory,
     loadFromFile,
     loadFromUrl,
-    loadFromHistory,
     closeAsar,
     openFile,
     saveCurrentFile,
     resetFile,
     resetAllFiles,
-    createSnapshot,
-    deleteSnapshot,
     downloadModifiedAsar,
     downloadOriginalAsar,
-    deleteFromHistory,
-    getWorkspace,
     getFileSystem,
     refreshFileTree
   }

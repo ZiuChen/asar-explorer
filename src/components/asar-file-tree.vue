@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ChevronRight, File, Folder, FileCode, FilePen } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { ChevronRight, File, Folder, FolderOpen, FileCode, FilePen } from 'lucide-vue-next'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import type { FileTreeNode } from '@/types/asar'
 
@@ -16,6 +17,9 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [node: FileTreeNode]
 }>()
+
+// 目录展开状态
+const isOpen = ref(false)
 
 // 可编辑文件的扩展名
 const EDITABLE_EXTENSIONS = [
@@ -87,20 +91,32 @@ function isFileEditable(filename: string): boolean {
     ]"
     @click="handleSelect"
   >
-    <component :is="getFileIcon(node)" class="w-4 h-4 shrink-0" />
-    <span class="truncate flex-1">{{ node.name }}</span>
+    <component :is="getFileIcon(node)" class="size-4 shrink-0" />
+    <span
+      class="truncate flex-1"
+      :class="{
+        'text-orange-500': isModified(node)
+      }"
+      >{{ node.name }}</span
+    >
     <FilePen v-if="isModified(node)" class="w-3 h-3 text-yellow-500 shrink-0" />
   </div>
 
   <!-- 目录节点 -->
   <div v-else>
-    <Collapsible class="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90">
+    <Collapsible
+      v-model:open="isOpen"
+      class="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
+    >
       <CollapsibleTrigger as-child>
         <button
-          class="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-accent transition-colors w-full text-left"
+          :class="[
+            'flex items-center gap-2 px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-accent transition-colors w-full text-left'
+          ]"
         >
-          <ChevronRight class="w-4 h-4 transition-transform shrink-0" />
-          <Folder class="w-4 h-4 shrink-0" />
+          <ChevronRight class="size-4 transition-transform shrink-0" />
+          <FolderOpen v-if="isOpen" class="size-4 shrink-0" />
+          <Folder v-else class="size-4 shrink-0" />
           <span class="truncate">{{ node.name }}</span>
         </button>
       </CollapsibleTrigger>

@@ -15,15 +15,16 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "crypto-js": "^4.2.0",
-    "idb": "^8.0.3",
     "lucide-vue-next": "^0.560.0",
     "modern-monaco": "^0.3.6",
     "nanoid": "^5.1.6",
+    "prettier": "^3.7.4",
     "reka-ui": "^2.6.1",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.17",
     "vue": "3.6.0-alpha.6",
-    "vue-i18n": "^11.2.2"
+    "vue-i18n": "^11.2.2",
+    "vue-sonner": "^2.0.9"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
