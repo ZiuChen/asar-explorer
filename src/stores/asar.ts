@@ -10,7 +10,7 @@ import type { AsarMeta, AsarSnapshot, AsarHistoryItem, FileTreeNode } from '@/ty
 import { AsarFileSystem } from '@/utils/asar-filesystem'
 import { modifyPackageAsync } from '@/lib/asar-browser'
 import { historyDB } from '@/persist/history'
-import { randomUUID, sha256 } from '@/utils/crypto'
+import { prefixedNanoid, sha256 } from '@/utils/crypto'
 
 /** 使用 createGlobalState 创建全局状态 */
 export const useAsarStore = createGlobalState(() => {
@@ -222,7 +222,7 @@ export const useAsarStore = createGlobalState(() => {
       await historyDB.saveAsar(existingMeta, data)
     } else {
       // 创建新记录
-      asarId = randomUUID()
+      asarId = prefixedNanoid('R')
       existingMeta = {
         id: asarId,
         name: fileName,
@@ -372,7 +372,7 @@ export const useAsarStore = createGlobalState(() => {
     }
 
     const snapshot: AsarSnapshot = {
-      id: randomUUID(),
+      id: prefixedNanoid('S'),
       asarId: currentAsar.value.id,
       name,
       createdAt: Date.now(),

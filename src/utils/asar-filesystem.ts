@@ -7,7 +7,7 @@ import type { FileSystem } from 'modern-monaco'
 import type { FileModification } from '@/types/asar'
 import { historyDB } from '@/persist/history'
 import { parseHeaderAsync, extractFileAsync } from '@/lib/asar-browser'
-import { randomUUID } from './crypto'
+import { prefixedNanoid } from './crypto'
 
 /** 文件系统条目类型 */
 const FileType = {
@@ -436,7 +436,7 @@ export class AsarFileSystem implements FileSystem {
     // 保存到 IndexedDB（如果有关联的 ASAR）
     if (this.asarId && context?.isModelContentChange !== false) {
       const modification: FileModification = {
-        id: randomUUID(),
+        id: prefixedNanoid('M'),
         asarId: this.asarId,
         path: '/' + this.normalizePath(filename),
         content: data,
