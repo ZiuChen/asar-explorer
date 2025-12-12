@@ -1,76 +1,140 @@
+[English](./README.md) | [中文](./README.zh-CN.md)
+
+---
+
 # ASAR Explorer
 
-一个纯浏览器端的 Electron ASAR 文件预览和编辑器。无需后端服务，在浏览器中直接解析和编辑 ASAR 文件。
+A pure browser-based Electron ASAR file preview and editor. No backend service required — parse and edit ASAR files directly in your browser.
 
-![ASAR Explorer Screenshot](./docs/screenshot.png)
+[Vercel - Live Demo](https://asar-explorer.vercel.app/) · [Github - Live Demo](https://ziuchen.github.io/asar-explorer/)
 
-## ✨ 特性
+## ✨ Features
 
-- 🌐 **纯浏览器运行** - 无需后端服务或 WebContainer
-- 📦 **直接解析 ASAR** - 使用自研 asar-browser 库
-- ✏️ **实时编辑** - Monaco Editor 提供专业的代码编辑体验
-- 💾 **本地历史** - IndexedDB 存储编辑历史和快照
-- 🎨 **代码高亮** - Shiki 预渲染 + Monaco 无缝切换
-- 📁 **文件树浏览** - 直观的文件结构展示
-- ⬇️ **导出修改** - 下载修改后的 ASAR 文件
+- 🌐 **Pure Browser Execution** - No backend services or WebContainers needed
+- 📦 **Direct ASAR Parsing** - Custom-built asar-browser library for handling ASAR files
+- ✏️ **Real-time Editing** - Professional code editing with Monaco Editor
+- 🎨 **Syntax Highlighting** - Shiki pre-rendering + seamless Monaco integration
+- 📁 **Intuitive File Tree** - Clear hierarchical file structure visualization
+- ⬇️ **Modified Export** - Download edited ASAR files
+- 🔄 **Multi-language Support** - English, Chinese, and more
+- 📱 **PWA Support** - Works offline with service workers
+- ⚡ **Lazy Loading** - Web Workers for async ASAR processing
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 安装依赖
+### Prerequisites
+
+- Node.js 18+
+- pnpm (or npm/yarn)
+
+### Installation
 
 ```bash
 pnpm install
 ```
 
-### 开发模式
+### Development
 
 ```bash
 pnpm dev
 ```
 
-### 构建生产版本
+The app will be available at `http://localhost:5173`
+
+### Production Build
 
 ```bash
 pnpm build
 ```
 
-## 📖 使用方法
+Output files are in the `dist/` directory.
 
-1. **上传 ASAR 文件**
-   - 点击上传区域选择文件
-   - 或拖放 ASAR 文件到上传区域
-   - 或输入 ASAR 文件的 URL
+## 📖 Usage Guide
 
-2. **浏览文件**
-   - 在左侧文件树中浏览 ASAR 内容
-   - 点击文件夹展开/折叠
-   - 点击文件在编辑器中打开
+### Loading ASAR Files
 
-3. **编辑文件**
-   - 在 Monaco 编辑器中编辑文件内容
-   - 修改会自动保存到本地
+1. **Upload File** - Click the upload area or drag-and-drop your ASAR file
+2. **From URL** - Paste a direct URL to an ASAR file
+3. **From History** - Re-open previously loaded files from your history
 
-4. **导出修改**
-   - 点击"下载修改后的 ASAR"导出
-   - 或点击"下载原始 ASAR"获取原始文件
+### Browsing & Editing
 
-5. **历史记录**
-   - 所有打开过的 ASAR 文件会自动保存
-   - 可以随时从历史记录中重新加载
+1. **File Tree** - Navigate the ASAR contents in the left sidebar
+2. **Open Files** - Click any file to open it in the editor
+3. **Edit** - Make changes directly in Monaco Editor
 
-## 🏗️ 技术架构
+### Exporting Changes
 
-详见 [架构文档](./docs/ARCHITECTURE.md)
+1. **Download Modified ASAR** - Export with all your edits applied
+2. **Download Original** - Get the unmodified original file
+3. **Create Snapshots** - Save named snapshots of your modifications
 
-### 核心技术
+### Managing History
 
-- **Vue 3.6** - 前端框架
-- **modern-monaco** - Monaco 编辑器集成
-- **Tailwind CSS 4** - 样式框架
-- **shadcn-vue / reka-ui** - UI 组件库
-- **IndexedDB** - 本地数据持久化
+- All opened ASAR files are automatically saved
+- Access them anytime from the History sidebar
+- Delete items you no longer need
 
-## 📝 许可证
+## 🏗️ Architecture
 
-MIT License
+ASAR Explorer is built on a modular architecture:
+
+- **asar-browser** - Custom ASAR parsing and packaging library
+- **AsarFileSystem** - Virtual filesystem implementation for modern-monaco
+- **Stores** - Vue 3 composables for state management
+
+## 🛠️ Technology Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Framework** | Vue 3.6 |
+| **Editor** | Monaco Editor (modern-monaco) |
+| **Styling** | Tailwind CSS 4 |
+| **UI Components** | shadcn-vue, Reka UI |
+| **Formatting** | Prettier |
+| **Code Highlight** | Shiki |
+| **Notifications** | Vue Sonner |
+| **Offline** | Workbox PWA |
+| **Build Tool** | Vite + Rolldown |
+| **Language Support** | Vue i18n |
+
+## 🌍 Supported Languages
+
+- English (en)
+- Chinese Simplified (zh)
+
+## 🎯 Limitations
+
+- **Large Files** - Very large ASAR files may cause high memory usage
+- **Binary Editing** - Binary files are view-only, text files can be edited
+- **Unpacked Files** - ASAR `unpacked` directory feature not yet supported
+
+## 🗺️ Roadmap
+
+- [ ] File search functionality
+- [ ] Create/delete file operations
+- [ ] Diff view for modifications
+- [ ] Multi-ASAR simultaneous editing
+- [ ] Undo/redo support
+- [ ] Directory bulk operations
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to:
+
+1. Report bugs via issues
+2. Suggest features
+3. Submit pull requests
+4. Improve documentation
+
+## 📄 License
+
+MIT License - See LICENSE file for details
+
+## 🙏 Acknowledgments
+
+- [electron/asar](https://github.com/electron/asar) - Original ASAR format spec
+- [Banou26/asar-browser](https://github.com/Banou26/asar-browser) - Browser ASAR implementation reference
+- [shadcn-vue](https://www.shadcn-vue.com/) - Component library
+- [Monaco Editor](https://microsoft.github.io/monaco-editor/) - Editor platform
 
