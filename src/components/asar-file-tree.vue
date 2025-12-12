@@ -1,0 +1,84 @@
+<script setup lang="ts">
+import { ChevronRight, File, Folder, FileCode, FilePen } from 'lucide-vue-next'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import type { FileTreeNode } from '@/models/types'
+import { isFileEditable } from '@/types/asar'
+
+defineOptions({
+  name: 'AsarFileTree'
+})
+
+const props = defineProps<{
+  node: FileTreeNode
+  selectedPath?: string | null
+  modifiedFiles?: Set<string>
+}>()
+
+const emit = defineEmits<{
+  select: [node: FileTreeNode]
+}>()
+
+function handleSelect() {
+  if (!props.node.isDirectory) {
+    emit('select', props.node)
+  }
+}
+
+function isSelected(node: FileTreeNode): boolean {
+  return node.path === props.selectedPath
+}
+
+function isModified(node: FileTreeNode): boolean {
+  // 检查 node 自身的 modified 属性或 modifiedFiles 集合
+  return node.modified || (props.modifiedFiles?.has(node.path) ?? false)
+}
+
+function getFileIcon(node: FileTreeNode) {
+  if (node.isDirectory) return Folder
+  if (isFileEditable(node.name)) return FileCode
+  return File
+}
+</script>
+
+<template>
+  <!-- 文件节点 -->
+  <div
+    v-if="!node.isDirectory"
+    :class="[
+      'flex items-center gap-2 px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-accent transition-colors',
+      isSelected(node) ? 'bg-accent text-accent-foreground' : ''
+    ]"
+    @click="handleSelect"
+  >
+    <component :is="getFileIcon(node)" class="w-4 h-4 shrink-0" />
+    <span class="truncate flex-1">{{ node.name }}</span>
+    <FilePen v-if="isModified(node)" class="w-3 h-3 text-yellow-500 shrink-0" />
+  </div>
+
+  <!-- 目录节点 -->
+  <div v-else>
+    <Collapsible class="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90">
+      <CollapsibleTrigger as-child>
+        <button
+          class="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md cursor-pointer hover:bg-accent transition-colors w-full text-left"
+        >
+          <ChevronRight class="w-4 h-4 transition-transform shrink-0" />
+          <Folder class="w-4 h-4 shrink-0" />
+          <span class="truncate">{{ node.name }}</span>
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div class="pl-4 border-l border-border/50 ml-2">
+          <AsarFileTree
+            v-for="child in node.children"
+            :key="child.path"
+            :node="child"
+            :selected-path="selectedPath"
+            :modified-files="modifiedFiles"
+            @select="emit('select', $event)"
+          />
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  </div>
+</template>

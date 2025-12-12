@@ -12,7 +12,10 @@ export default defineConfig({
   plugins: [
     vue({
       template: {
-        vapor: true
+        compilerOptions: {
+          // 告诉 Vue monaco-editor 是自定义元素
+          isCustomElement: (tag) => tag === 'monaco-editor'
+        }
       }
     }),
     tailwindcss()

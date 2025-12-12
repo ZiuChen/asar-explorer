@@ -11,8 +11,10 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",
     "@vueuse/core": "^14.1.0",
+    "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "idb": "^8.0.3",
     "lucide-vue-next": "^0.560.0",
     "modern-monaco": "^0.3.6",
     "reka-ui": "^2.6.1",
