@@ -42,7 +42,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: pnpm build --base /asar-explorer/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
