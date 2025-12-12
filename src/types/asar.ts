@@ -1,104 +1,75 @@
-// ASAR 文件条目类型
-export interface AsarFileEntry {
-  size: number
-  offset?: string
-  executable?: boolean
-  unpacked?: boolean
-}
-
-export interface AsarDirectoryEntry {
-  files: Record<string, AsarEntry>
-}
-
-export type AsarEntry = AsarFileEntry | AsarDirectoryEntry
-
-export interface AsarHeader {
-  files: Record<string, AsarEntry>
-}
-
-// 文件树节点类型
-export interface FileTreeNode {
+/** ASAR 文件元信息 */
+export interface AsarMeta {
+  /** 唯一标识符 */
+  id: string
+  /** 文件名 */
   name: string
+  /** 文件大小（字节） */
+  size: number
+  /** 导入时间 */
+  importedAt: number
+  /** 最后修改时间 */
+  lastModifiedAt: number
+  /** 来源类型 */
+  source: 'file' | 'url' | 'data-url'
+  /** 来源 URL（如果是从 URL 加载） */
+  sourceUrl?: string
+  /** 文件哈希（用于去重） */
+  hash?: string
+}
+
+/** ASAR 编辑快照 */
+export interface AsarSnapshot {
+  /** 快照 ID */
+  id: string
+  /** 关联的 ASAR ID */
+  asarId: string
+  /** 快照名称 */
+  name: string
+  /** 创建时间 */
+  createdAt: number
+  /** 修改的文件路径列表 */
+  modifiedFiles: string[]
+  /** 快照描述 */
+  description?: string
+}
+
+/** 文件修改记录 */
+export interface FileModification {
+  /** 记录 ID */
+  id: string
+  /** 关联的 ASAR ID */
+  asarId: string
+  /** 关联的快照 ID（可选） */
+  snapshotId?: string
+  /** 文件路径 */
   path: string
+  /** 修改后的内容 */
+  content: Uint8Array
+  /** 修改时间 */
+  modifiedAt: number
+}
+
+/** ASAR 历史记录（用于展示） */
+export interface AsarHistoryItem extends AsarMeta {
+  /** 快照数量 */
+  snapshotCount: number
+  /** 修改文件数量 */
+  modifiedFileCount: number
+}
+
+/** 文件树节点 */
+export interface FileTreeNode {
+  /** 文件/目录名 */
+  name: string
+  /** 完整路径 */
+  path: string
+  /** 是否为目录 */
   isDirectory: boolean
+  /** 子节点（目录时有效） */
   children?: FileTreeNode[]
+  /** 文件大小（文件时有效） */
   size?: number
-  executable?: boolean
-}
-
-// 可编辑文件的扩展名
-export const EDITABLE_EXTENSIONS = [
-  '.js',
-  '.mjs',
-  '.cjs',
-  '.ts',
-  '.mts',
-  '.cts',
-  '.jsx',
-  '.tsx',
-  '.json',
-  '.html',
-  '.htm',
-  '.css',
-  '.scss',
-  '.sass',
-  '.less',
-  '.vue',
-  '.svelte',
-  '.md',
-  '.txt',
-  '.xml',
-  '.yaml',
-  '.yml',
-  '.env',
-  '.gitignore',
-  '.sh',
-  '.bash',
-  '.py',
-  '.sql'
-]
-
-// 根据扩展名获取 Monaco 语言
-export function getLanguageByExtension(filename: string): string {
-  const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase()
-  const languageMap: Record<string, string> = {
-    '.js': 'javascript',
-    '.mjs': 'javascript',
-    '.cjs': 'javascript',
-    '.ts': 'typescript',
-    '.mts': 'typescript',
-    '.cts': 'typescript',
-    '.jsx': 'javascript',
-    '.tsx': 'typescript',
-    '.json': 'json',
-    '.html': 'html',
-    '.htm': 'html',
-    '.css': 'css',
-    '.scss': 'scss',
-    '.sass': 'scss',
-    '.less': 'less',
-    '.vue': 'vue',
-    '.svelte': 'svelte',
-    '.md': 'markdown',
-    '.txt': 'plaintext',
-    '.xml': 'xml',
-    '.yaml': 'yaml',
-    '.yml': 'yaml',
-    '.sh': 'shell',
-    '.bash': 'shell',
-    '.py': 'python',
-    '.sql': 'sql'
-  }
-  return languageMap[ext] || 'plaintext'
-}
-
-// 检查文件是否可编辑
-export function isFileEditable(filename: string): boolean {
-  const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase()
-  return EDITABLE_EXTENSIONS.includes(ext)
-}
-
-// 检查文件是否为文本文件（可预览）
-export function isTextFile(filename: string): boolean {
-  return isFileEditable(filename)
+  /** 是否已修改 */
+  modified?: boolean
 }

@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ChevronRight, File, Folder, FileCode, FilePen } from 'lucide-vue-next'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import type { FileTreeNode } from '@/models/types'
-import { isFileEditable } from '@/types/asar'
+import type { FileTreeNode } from '@/types/asar'
 
 defineOptions({
   name: 'AsarFileTree'
@@ -17,6 +16,38 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [node: FileTreeNode]
 }>()
+
+// 可编辑文件的扩展名
+const EDITABLE_EXTENSIONS = [
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.ts',
+  '.mts',
+  '.cts',
+  '.jsx',
+  '.tsx',
+  '.json',
+  '.html',
+  '.htm',
+  '.css',
+  '.scss',
+  '.sass',
+  '.less',
+  '.vue',
+  '.svelte',
+  '.md',
+  '.txt',
+  '.xml',
+  '.yaml',
+  '.yml',
+  '.env',
+  '.gitignore',
+  '.sh',
+  '.bash',
+  '.py',
+  '.sql'
+]
 
 function handleSelect() {
   if (!props.node.isDirectory) {
@@ -37,6 +68,12 @@ function getFileIcon(node: FileTreeNode) {
   if (node.isDirectory) return Folder
   if (isFileEditable(node.name)) return FileCode
   return File
+}
+
+// 检查文件是否可编辑
+function isFileEditable(filename: string): boolean {
+  const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase()
+  return EDITABLE_EXTENSIONS.includes(ext)
 }
 </script>
 

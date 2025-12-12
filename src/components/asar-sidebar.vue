@@ -4,7 +4,7 @@ import { PackageOpen, Download, Loader2, Camera, X, RotateCcw } from 'lucide-vue
 import AsarFileTree from '@/components/asar-file-tree.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import type { FileTreeNode } from '@/models/types'
+import type { FileTreeNode } from '@/types/asar'
 import { useAsarStore } from '@/stores/asar'
 
 const {

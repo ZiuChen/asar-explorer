@@ -7,7 +7,7 @@ import { useAsarStore } from '@/stores/asar'
 
 const AsarSidebar = defineAsyncComponent(() => import('@/components/asar-sidebar.vue'))
 
-const { asarLoaded, currentFile, isEditorReady } = useAsarStore()
+const { asarLoaded, currentFile } = useAsarStore()
 </script>
 
 <template>
@@ -19,7 +19,7 @@ const { asarLoaded, currentFile, isEditorReady } = useAsarStore()
   <!-- 已加载 ASAR - 使用 Resizable 布局 -->
   <ResizablePanelGroup v-else direction="horizontal" class="h-screen">
     <!-- Sidebar 面板 -->
-    <ResizablePanel :default-size="20" :min-size="15" :max-size="40" class="bg-sidebar">
+    <ResizablePanel :default-size="25" :min-size="25" :max-size="50" class="bg-sidebar">
       <AsarSidebar />
     </ResizablePanel>
 
@@ -38,14 +38,6 @@ const { asarLoaded, currentFile, isEditorReady } = useAsarStore()
       <main class="flex-1 min-h-0 relative">
         <!-- Monaco Editor 组件 -->
         <MonacoEditor class="absolute inset-0" />
-
-        <!-- 未选择文件时的提示 -->
-        <div
-          v-if="!currentFile && isEditorReady"
-          class="absolute inset-0 flex items-center justify-center bg-background/80 pointer-events-none"
-        >
-          <p class="text-muted-foreground">从左侧文件树选择一个文件开始编辑</p>
-        </div>
       </main>
     </ResizablePanel>
   </ResizablePanelGroup>

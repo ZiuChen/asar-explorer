@@ -4,7 +4,7 @@
  */
 
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { AsarMeta, AsarSnapshot, FileModification, AsarHistoryItem } from '@/models/types'
+import type { AsarMeta, AsarSnapshot, FileModification, AsarHistoryItem } from '@/types/asar'
 
 const DB_NAME = 'asar-explorer'
 const DB_VERSION = 1
@@ -42,18 +42,6 @@ interface AsarExplorerDB extends DBSchema {
       'by-asarId-path': [string, string]
     }
   }
-}
-
-/** 生成唯一 ID */
-export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
-}
-
-/** 计算 ArrayBuffer 的 SHA-256 哈希 */
-export async function hashArrayBuffer(buffer: ArrayBuffer): Promise<string> {
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 /** 获取数据库实例 */
