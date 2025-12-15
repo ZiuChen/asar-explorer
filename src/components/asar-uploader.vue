@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAsarStore } from '@/stores/asar'
 import { toast } from 'vue-sonner'
+import { useEventListener } from '@vueuse/core'
 
 const { t } = useI18n()
 
@@ -13,6 +14,35 @@ const { loadFromFile, loadFromUrl, isLoadingAsar, error } = useAsarStore()
 
 const urlInput = ref('')
 const fileInputRef = ref<HTMLInputElement | null>(null)
+
+useEventListener('paste', (e) => {
+  const items = e.clipboardData?.items
+  if (!items) return
+
+  for (const item of Array.from(items)) {
+    if (item.kind === 'file') {
+      const file = item.getAsFile()
+      if (file && file.name.endsWith('.asar')) {
+        e.preventDefault()
+        loadFromFile(file).catch((err) => {
+          console.error('Failed to load pasted file:', err)
+        })
+        return
+      }
+    } else if (item.kind === 'string' && item.type === 'text/plain') {
+      item.getAsString(async (text) => {
+        if (text.startsWith('http://') || text.startsWith('https://')) {
+          e.preventDefault()
+          try {
+            await loadFromUrl(text)
+          } catch (err) {
+            console.error('Failed to load from pasted URL:', err)
+          }
+        }
+      })
+    }
+  }
+})
 
 // 处理文件选择
 function handleFileSelect() {
