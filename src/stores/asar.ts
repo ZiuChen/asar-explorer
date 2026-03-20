@@ -5,6 +5,7 @@
 
 import { ref, shallowRef, computed } from 'vue'
 import { createGlobalState } from '@vueuse/core'
+import { zipSync } from 'fflate'
 import type { AsarMeta, FileTreeNode } from '@/types/asar'
 import { AsarFileSystem } from '@/utils/asar-filesystem'
 import { modifyPackageAsync } from '@/lib/asar-browser'
@@ -39,6 +40,9 @@ export const useAsarStore = createGlobalState(() => {
 
   /** 是否正在重新打包 */
   const isRepacking = ref(false)
+
+  /** 是否正在打包 ZIP */
+  const isZipping = ref(false)
 
   /** 错误信息 */
   const error = ref<string | null>(null)
@@ -285,11 +289,50 @@ export const useAsarStore = createGlobalState(() => {
     URL.revokeObjectURL(url)
   }
 
+  /**
+   * 下载为 ZIP 压缩包
+   */
+  async function downloadAsZip(): Promise<void> {
+    if (!currentAsar.value || !currentAsarData) {
+      throw new Error('No ASAR loaded')
+    }
+
+    try {
+      isZipping.value = true
+      error.value = null
+
+      const allFiles = asarFS.getAllFiles()
+      const zipData: Record<string, Uint8Array> = {}
+
+      for (const filePath of allFiles) {
+        zipData[filePath] = await asarFS.readFile(filePath)
+      }
+
+      const zipped = zipSync(zipData)
+
+      const blob = new Blob([zipped.buffer as ArrayBuffer], { type: 'application/zip' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = currentAsar.value.name.replace(/\.asar$/, '') + '.zip'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+      throw e
+    } finally {
+      isZipping.value = false
+    }
+  }
+
   // ========== 辅助方法 ==========
 
   /**
    * 获取 FileSystem 实例
    */
+
   function getFileSystem(): AsarFileSystem {
     return asarFS
   }
@@ -310,6 +353,7 @@ export const useAsarStore = createGlobalState(() => {
     isLoadingAsar,
     isSaving,
     isRepacking,
+    isZipping,
     error,
     modifiedFiles,
     // 计算属性
@@ -325,6 +369,7 @@ export const useAsarStore = createGlobalState(() => {
     resetAllFiles,
     downloadModifiedAsar,
     downloadOriginalAsar,
+    downloadAsZip,
     getFileSystem,
     refreshFileTree
   }

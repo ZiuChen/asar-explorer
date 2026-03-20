@@ -38,6 +38,7 @@ export default {
   },
   sidebar: {
     modified: '{count} files modified',
+    downloadZip: 'Download ZIP',
     clearModifications: 'Clear modifications',
     clearConfirmTitle: 'Clear all modifications',
     clearConfirmDescription:

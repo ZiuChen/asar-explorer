@@ -37,6 +37,7 @@ export default {
   },
   sidebar: {
     modified: '已修改 {count} 个文件',
+    downloadZip: '下载 ZIP 压缩包',
     clearModifications: '清除修改',
     clearConfirmTitle: '清除所有修改',
     clearConfirmDescription: '确定要清除所有修改吗？此操作无法撤销。',

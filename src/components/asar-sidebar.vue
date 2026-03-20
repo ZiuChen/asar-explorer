@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { PackageOpen, Download, Loader2, X, RotateCcw } from 'lucide-vue-next'
+import { PackageOpen, Download, FolderArchive, Loader2, X, RotateCcw } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import AsarFileTree from '@/components/asar-file-tree.vue'
 import AlertDialogConfirm from '@/components/alert-dialog-confirm.vue'
@@ -17,10 +17,12 @@ const {
   modifiedFiles,
   hasModifications,
   isRepacking,
+  isZipping,
   openFile,
   resetAllFiles,
   downloadModifiedAsar,
   downloadOriginalAsar,
+  downloadAsZip,
   closeAsar
 } = useAsarStore()
 
@@ -115,6 +117,12 @@ async function handleClose() {
         <Loader2 v-if="isRepacking" class="size-4 animate-spin" />
         <Download v-else class="size-4" />
         {{ t('common.download') }}
+      </Button>
+
+      <Button variant="outline" class="w-full" :disabled="isZipping" @click="downloadAsZip">
+        <Loader2 v-if="isZipping" class="size-4 animate-spin" />
+        <FolderArchive v-else class="size-4" />
+        {{ t('sidebar.downloadZip') }}
       </Button>
 
       <Button v-if="hasModifications" variant="destructive" class="w-full" @click="handleReset">

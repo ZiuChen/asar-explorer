@@ -485,6 +485,25 @@ export class AsarFileSystem {
     return result
   }
 
+  /** 获取所有文件路径 */
+  getAllFiles(): string[] {
+    const result: string[] = []
+
+    const traverse = (node: FileNode, path: string) => {
+      if (node.type === FileType.File) {
+        result.push(path)
+      }
+      if (node.children) {
+        for (const [name, child] of node.children) {
+          traverse(child, path ? `${path}/${name}` : name)
+        }
+      }
+    }
+
+    traverse(this.root, '')
+    return result
+  }
+
   /** 重置文件到原始状态 */
   async resetFile(filename: string): Promise<void> {
     if (!this.asarData || !this.asarId) {
